@@ -210,3 +210,8 @@ __marimo__/
 .DS_Store
 pyvenv.cfg
 bin/
+nc2_lab_vars.py
+aws-tf/.terraform.lock.hcl
+aws-tf/terraform.tfstate
+aws-tf/.terraform/
+aws-tf/*.plan

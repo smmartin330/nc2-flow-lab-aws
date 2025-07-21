@@ -1,0 +1,54 @@
+{
+    "data": {
+        "organization_id": "{{ organization_id }}",
+        "cloud_account_id": "{{ cloud_account_id }}",
+        "region": "{{ region}}",
+        "name": "{{ cluster_name }}",
+        "aos_version": "{{ aos_version }}",
+        "license": "nci",
+        "software_tier": "{{ software_tier }}",
+        "use_case": "general",
+        "capacity": [
+            {
+                "host_type": "{{ host_type }}",
+                "number_of_hosts": "{{ number_of_hosts|int }}"
+            }
+        ],
+        "cluster_fault_tolerance": {
+            "factor": "{{ cluster_fault_tolerance }}"
+        },
+        "host_access_ssh_key": "{{ host_access_ssh_key }}",
+        "network": {
+            "management_subnet": "{{ management_subnet_id }}",
+            "availability_zone": "{{ availability_zone }}",
+            "fvn_config": {
+                "subnet_cidr": "{{ fvn_cidr }}",
+                "subnet_cloud_id": "{{ fvn_subnet_id }}"
+            },
+            "fvn_enabled": true,
+            "management_services_access_policy": {
+                "mode": "restricted",
+                "ip_addresses": "{{ access_ips }}"
+            },
+            "mode": "existing",
+            "prism_element_access_policy": {
+                "mode": "restricted",
+                "ip_addresses": "{{ access_ips }}"
+            },
+            "test_network_connectivity": true,
+            "vpc": "{{ vpc_id }}",
+            "vpc_cidr": "{{ vpc_cidr }}"
+        },
+        "prism_central": {
+            "management_subnet": "{{ pc_subnet_id }}",
+            "mode": "new",
+            "ntp_server_ip_list": [
+                "0.pool.ntp.org",
+                "1.pool.ntp.org",
+                "2.pool.ntp.org"
+            ],
+            "version": "{{ pc_version }}",
+            "vm_size": "{{ pc_size }}"
+        }
+    }
+}

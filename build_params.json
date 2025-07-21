@@ -1,0 +1,93 @@
+{
+    "prefix": {
+        "desc": "Name prefix",
+        "help": "A string that will prepend all AWS objects and NC2 cluster names.",
+        "type": "str",
+        "default": "nc2-flow-lab",
+        "val": ""
+    },
+    "region": {
+        "desc": "AWS Region",
+        "help": "The AWS Region to use. Ensure available quota or else builds will fail.",
+        "type": "str",
+        "default": "us-east-2",
+        "val": ""
+    },
+    "az": {
+        "desc": "AWS Availability Zone",
+        "help": "The AWS Availability Zone to use. Ensure available quota or else builds will fail.",
+        "type": "str",
+        "default": "us-east-2b",
+        "val": ""
+    },
+    "vpc_cidr": {
+        "desc": "VPC Supernet (Minimum /20)",
+        "help": "The supernet for the AWS VPC in CIDR format. A /20 is the minimum to account for Flow networks starting at the 10th /24 to match cluster numbering.",
+        "type": "str",
+        "default": "172.20.0.0/16",
+        "val": ""
+    },
+    "cluster_count": {
+        "desc": "Clusters needed (Maximum 10)",
+        "help": "How many clusters to build.",
+        "type": "int",
+        "default": 1,
+        "val": ""
+    },
+    "host_type": {
+        "desc": "Host type",
+        "help": "The AWS host type to deploy. Refer to https://portal.nutanix.com/page/documents/details?targetId=Nutanix-Clusters-AWS:aws-clusters-aws-xi-supported-regions-metals.html for availability by region. This script does not yet validate availability before deploying, so insufficient capacity will result in failure.",
+        "type": "str",
+        "default": "z1d.metal",
+        "val": ""
+    },
+    "host_qty": {
+        "desc": "Hosts per cluster",
+        "help": "The number of hosts per cluster",
+        "type": "int",
+        "default": 1,
+        "val": ""
+    },
+    "aos_version": {
+        "desc": "AOS Version",
+        "help": "The AOS Version to deploy.",
+        "type": "str",
+        "default": "7.3",
+        "val": ""
+    },
+    "software_tier": {
+        "desc": "NCI Software Tier ",
+        "help": "The NCI software tier, either 'pro' or 'ultimate.'",
+        "type": "str",
+        "default": "ultimate",
+        "val": ""
+    },
+    "pc_version": {
+        "desc": "Prism Central Version",
+        "help": "The Prism Central version to deploy. A new PC will be built for each cluster.",
+        "type": "str",
+        "default": "pc.7.3",
+        "val": ""
+    },
+    "pc_size": {
+        "desc": "Prism Central size",
+        "help": "The Prism Central size to deploy.",
+        "type": "str",
+        "default": "small",
+        "val": ""
+    },
+    "ssh_key": {
+        "desc": "Host SSH Key",
+        "help": "Provide an SSH key from AWS. The key must already be created. Ensure you have the private key.",
+        "type": "str",
+        "default": "martin-test",
+        "val": ""
+    },
+    "access_ips": {
+        "desc": "Access IPs",
+        "help": "A list of public IPs in CIDR format, comma seperated. A network load balancer will be created to enable access to Prism Central via the provided public IPs.",
+        "type": "list",
+        "default": "192.146.155.8/32",
+        "val": ""
+    }
+}

@@ -211,7 +211,6 @@ __marimo__/
 pyvenv.cfg
 bin/
 nc2_lab_vars.py
-aws-tf/.terraform.lock.hcl
-aws-tf/terraform.tfstate
-aws-tf/.terraform/
-aws-tf/*.plan
+nc2-flow-lab/*
+vm_config_templates/web01-config.j2
+nc2-flow-lab.json

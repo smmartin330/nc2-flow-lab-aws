@@ -210,7 +210,9 @@ __marimo__/
 .DS_Store
 pyvenv.cfg
 bin/
-nc2_lab_vars.py
 nc2-flow-lab/*
+nc2-flow-lab-OLD/*
 vm_config_templates/web01-config.j2
 nc2-flow-lab.json
+vars.py
+vm_config_templates/sample.yaml

@@ -3,9 +3,7 @@ from vars import *
 from classes import *
 
 def main():
-    parser = argparse.ArgumentParser(description=f"NC2 Lab Generator")
-    # parser.add_argument("--aws", "-a", help="Build on AWS", action='store_true') # only AWS for now, so that's the default
-    # parser.add_argument("--azure", "-z", help="Build on Azure", action='store_true') # not yet!
+    parser = argparse.ArgumentParser(description=f"NC2 Lab Generator for AWS")
     parser.add_argument(
         "--directory",
         "-d",
@@ -21,8 +19,8 @@ def main():
     args.aws = True
 
     # debug hard-coded vars
-    args.directory = "nc2-flow-lab"
-    args.json = "nc2-flow-lab.json"
+    args.directory = "temp-demo"
+    args.json = "temp-demo.json"
 
     lab_build = LabBuild(args)
 
@@ -30,16 +28,15 @@ def main():
         lab_build.read_params_from_file()
     else:
         lab_build.manual_params_input()
-
     lab_build.validate_info()
     lab_build.set_aws_params()
     lab_build.render_template(folder="cloud", template="aws_provider", values=lab_build.aws_params)
     lab_build.render_template(folder="cloud", template="aws_networking", values=lab_build.aws_params)
-    # lab_build.build_aws_networking()
-    # lab_build.get_aws_created_objects()
-    # lab_build.build_nc2_cluster_objects()
-    # lab_build.create_nc2_jwt()
-    # lab_build.request_nc2_aws_clusters()
+    lab_build.build_aws_networking()
+    lab_build.get_aws_created_objects()
+    lab_build.build_nc2_cluster_objects()
+    lab_build.get_nc2_jwt()
+    lab_build.create_nc2_clusters()
 
 
 if __name__ == "__main__":

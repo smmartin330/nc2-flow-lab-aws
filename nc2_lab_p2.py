@@ -41,17 +41,13 @@ def main():
 
     lab_build = LabBuild(args)
 
-    # lab_build.gather_info()
-    # lab_build.validate_info()
-    # lab_build.set_aws_params()
-    # lab_build.render_template("aws_provider", lab_build.aws_params)
-    # lab_build.render_template("aws_networking", lab_build.aws_params)
-    # lab_build.build_aws_networking()
-    # lab_build.get_aws_created_objects()
-    # lab_build.build_nc2_cluster_objects()
-    lab_build.create_nc2_jwt()
-    cluster_id = lab_build.get_nc2_cluster_id_by_name()
-    lab_build.get_nc2_cluster_by_id(id=cluster_id)
+    lab_build.read_project_data()
+    lab_build.validate_info()
+    lab_build.read_built_cluster_data()
+    lab_build.get_nc2_jwt()
+
+
+    # lab_build.get_nc2_cluster_by_id(id=cluster_id)
     # lab_build.request_nc2_aws_clusters()
     # lab_build.get_nc2_built_clusters()
     # lab_build.get_nc2_prism_centrals()

@@ -1,0 +1,7 @@
+{% for image in images %}
+resource "nutanix_image" "{{ image.name}}" {
+  name = "{{ image.name }}"
+  source_uri  = "{{ image.source_uri }}"
+}
+
+{% endfor %}

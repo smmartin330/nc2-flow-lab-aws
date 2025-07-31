@@ -28,7 +28,7 @@ resource "aws_vpc" "vpc" {
   enable_dns_support   = true
 
   tags = {
-    Name = "{{ project_prefix }}-vpc"
+    Name = "{{ project }}-vpc"
   }
 }
 
@@ -37,7 +37,7 @@ resource "aws_default_route_table" "vpc_default_rt" {
   default_route_table_id = aws_vpc.vpc.default_route_table_id
 
   tags = {
-    Name = "{{ project_prefix }}-vpc-default-rt"
+    Name = "{{ project }}-vpc-default-rt"
   }
 }
 
@@ -46,7 +46,7 @@ resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.vpc.id
 
   tags = {
-    Name = "{{ project_prefix }}-public-rt"
+    Name = "{{ project }}-public-rt"
   }
 }
 
@@ -55,7 +55,7 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
 
   tags = {
-    Name = "{{ project_prefix }}-igw"
+    Name = "{{ project }}-igw"
   }
 }
 
@@ -64,7 +64,7 @@ resource "aws_eip" "nat_eip" {
   domain = "vpc"
 
   tags = {
-    Name = "{{ project_prefix }}-nat-eip"
+    Name = "{{ project }}-nat-eip"
   }
 }
 
@@ -74,7 +74,7 @@ resource "aws_nat_gateway" "nat_gw" {
   subnet_id     = aws_subnet.public_subnet.id
 
   tags = {
-    Name = "{{ project_prefix }}-nat-gw"
+    Name = "{{ project }}-nat-gw"
   }
 
   depends_on = [aws_internet_gateway.igw]
@@ -108,7 +108,7 @@ resource "aws_subnet" "public_subnet" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "{{ project_prefix }}-public-subnet"
+    Name = "{{ project }}-public-subnet"
   }
 }
 
@@ -120,7 +120,7 @@ resource "aws_subnet" "private_metal_subnet" {
   availability_zone = var.vpc_az
 
   tags = {
-    Name = "{{ project_prefix }}-private-metal-subnet"
+    Name = "{{ project }}-private-metal-subnet"
   }
 }
 
@@ -133,7 +133,7 @@ resource "aws_subnet" "private_pc_subnet_{{ i }}" {
   availability_zone = var.vpc_az
 
   tags = {
-    Name = "{{ project_prefix }}-{{ i }}-private-pc-subnet_{{ i }}"
+    Name = "{{ project }}-{{ i }}-private-pc-subnet_{{ i }}"
   }
 }
 
@@ -143,25 +143,25 @@ resource "aws_subnet" "private_flow_subnet_{{ i }}" {
   availability_zone = var.vpc_az
 
   tags = {
-    Name = "{{ project_prefix }}-{{ i }}-private-flow-subnet"
+    Name = "{{ project }}-{{ i }}-private-flow-subnet"
   }
 } 
 
 {% endfor %}
 
-resource "aws_security_group" "{{ project_prefix }}-nlb-sg" {
-  name        = "{{ project_prefix }}-nlb-sg"
+resource "aws_security_group" "{{ project }}-nlb-sg" {
+  name        = "{{ project }}-nlb-sg"
   description = "Allow inbound access to Prism Centrals"
   vpc_id      = aws_vpc.vpc.id
 
   tags = {
-    Name = "{{ project_prefix }}-nlb-sg"
+    Name = "{{ project }}-nlb-sg"
   }
 }
 
 {% for i in range(0,access_ips|length) %}
-resource "aws_vpc_security_group_ingress_rule" "{{ project_prefix }}-nlb-inbound_{{ i }}" {
-  security_group_id = aws_security_group.{{ project_prefix }}-nlb-sg.id
+resource "aws_vpc_security_group_ingress_rule" "{{ project }}-nlb-inbound_{{ i }}" {
+  security_group_id = aws_security_group.{{ project }}-nlb-sg.id
   cidr_ipv4       = "{{ access_ips[i] }}"
   from_port         = 9440
   ip_protocol       = "tcp"
@@ -169,20 +169,20 @@ resource "aws_vpc_security_group_ingress_rule" "{{ project_prefix }}-nlb-inbound
 }
 {% endfor %}
 
-resource "aws_vpc_security_group_egress_rule" "{{ project_prefix }}-nlb-outbound" {
-  security_group_id = aws_security_group.{{ project_prefix }}-nlb-sg.id
+resource "aws_vpc_security_group_egress_rule" "{{ project }}-nlb-outbound" {
+  security_group_id = aws_security_group.{{ project }}-nlb-sg.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1" # semantically equivalent to all ports
 }
 
-resource "aws_lb" "{{ project_prefix }}-nlb" {
-  name               = "{{ project_prefix }}-nlb"
+resource "aws_lb" "{{ project }}-nlb" {
+  name               = "{{ project }}-nlb"
   internal           = false
   load_balancer_type = "network"
   subnets            = [ aws_subnet.public_subnet.id ]
-  security_groups    = [ aws_security_group.{{ project_prefix }}-nlb-sg.id ]
+  security_groups    = [ aws_security_group.{{ project }}-nlb-sg.id ]
 
   tags = {
-    Name = "{{ project_prefix }}-nlb"
+    Name = "{{ project }}-nlb"
   }
 }

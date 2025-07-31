@@ -1,5 +1,5 @@
 {
-    "prefix": {
+    "project": {
         "desc": "Name prefix",
         "help": "A string that will prepend all AWS objects and NC2 cluster names.",
         "type": "str",

@@ -25,6 +25,9 @@ class nc2Cluster:
         self.substrate = None
         self.state_file = None
 
+        self.cluster_data = None
+        self.hosts = None
+
         self.create_payload = {}
         self.create_status_code = None
         self.create_response = None
@@ -37,6 +40,8 @@ class nc2Cluster:
         self.flow_subnet_cidr = None
         self.flow_subnet_id = None
         self.access_url = None
+        self.pc_user = "admin"
+        self.pc_password = "Nutanix.123"
 
     def create_aws(self,jwt):
         """
@@ -92,7 +97,7 @@ class nc2Cluster:
             response_data = response.json()
             if len(response_data['data']) > 1:
                 # This would be unexpected, as with a 10 cluster limit and numbering starting at 0, there should never be two matches.
-                # The first would be prefix-0, the last would be prefix-9.
+                # The first would be project-0, the last would be project-9.
                 # Still, this situation should be handled eventually.
                 pass
             self.cluster_id = response_data['data'][0]['id']
@@ -108,16 +113,33 @@ class nc2Cluster:
         }
 
         response = requests.get(
-            NC2_BASE_URL + NC2_LIST_CLUSTERS_URL + '/' + id, headers=headers
+            NC2_BASE_URL + NC2_LIST_CLUSTERS_URL + '/' + self.cluster_id, headers=headers
         )
-
+        
         if response.status_code == 200:
-            pass
+            response_data = response.json()
+            self.cluster_data = response_data['data']
+            self.hosts = response_data['data']['hosts']
+            self.pc_ips = response_data['data']['prism_central']['vm_ips']
+            self.pc_vip = response_data['data']['prism_central']['pc_virtual_ip']
+            return self.cluster_data
         else:
-            pass
+            return False
 
-    def get_cluster_pc_info(self):
-        pass
+    def write_state_file(self):
+        file = open(self.state_file, "w")
+        file.write(json.dumps(self.__dict__,indent=2))
+        file.close()
+    
+    def load_state_file(self):
+        try: # Read cluster state file
+            file = open(self.state_file)
+            state = json.loads(file.read())
+            file.close()
+        except Exception as e:
+            self.fail(f"Unable to load cluster state for cluster {self.number}: {e}")
+        for k,v in state.items(): # Load data from cluster state file into cluster object
+            self.__dict__[k] = v
 
 class LabBuild:
     def __init__(self, args):
@@ -128,7 +150,7 @@ class LabBuild:
         self.build_params = {}
         self.networks = {}
         self.aws_params = {
-            "project_prefix": "",
+            "project_project": "",
             "vpc_region": "",
             "vpc_az": "",
             "vpc_cidr": "",
@@ -185,6 +207,8 @@ class LabBuild:
             print(f"An error occurred: {e}")
             quit()
         self.cloud_path = Path(os.path.join(self.directory, "cloud"))
+
+        self.tofu = Tofu(cwd=self.cloud_path)
         
         self.logfile = open(os.path.join(self.directory, "logfile.txt"), "a")
 
@@ -481,8 +505,8 @@ class LabBuild:
             self.aws_params["token"] = AWS_SESSION_TOKEN
             self.log(f"AWS Session Token: NOT LOGGED")
 
-        self.aws_params["project_prefix"] = self.build_params["prefix"]["val"]
-        self.log(f"Project Prefix: {self.aws_params["project_prefix"]}")
+        self.aws_params["project_project"] = self.build_params["project"]["val"]
+        self.log(f"Project project: {self.aws_params["project_project"]}")
 
         self.aws_params["vpc_region"] = self.build_params["region"]["val"]
         self.log(f"AWS Region: {self.build_params["region"]["val"]}")
@@ -542,73 +566,86 @@ class LabBuild:
 
         return
 
-    def build_aws_networking(self):
-        """
-        Builds AWS networking via OpenTofu using generated configuration in provided directory.
-        """
-        tofu = Tofu(cwd=self.cloud_path)
-        try:
-            self.log("Initializing OpenTofu Project for AWS Networking.")
-            self.init = tofu.init()
-        except Exception as e:
-            self.fail(f"Failed to initialize OpenTofu project: {e}")
+    def cloud_tofu_project(self,action):
+        match action:
+            case "init":
+                try:
+                    self.log("Initializing OpenTofu Project for Cloud Networking.")
+                    self.init = self.tofu.init()
+                except Exception as e:
+                    self.fail(f"Failed to initialize OpenTofu project: {e}")
+            case "plan":
+                try:
+                    self.log("Planning OpenTofu Project for Cloud Networking")
+                    self.plan_log, self.plan = self.tofu.plan()
+                    if not self.plan or self.plan.errored:
+                        self.fail(f"OpenTofu Plan Failed: {self.plan_log}")
+                except Exception as e:
+                    self.fail(f"Failed to run tofu plan: {e}")
+            case "apply":
+                try:
+                    self.log("Applying OpenTofu Project for AWS Networking")
+                    self.apply_log = self.tofu.apply()
+                    self.log("OpenTofu Log:")
+                    self.log(self.apply_log)
+                    return True, self.apply_log
+                except Exception as e:
+                    self.fail(
+                        f"OpenTofu plan failed to apply: {e}\nOpenTofu Apply Log:\n{self.apply_log}"
+                    )
+            case "get_aws_ids":
+                self.log("Getting details of AWS Created Objects from tfstate file.")
+                try:
+                    tfstate_file = open(os.path.join(self.directory,"cloud", "terraform.tfstate"), "r")
+                    tfstate_json = json.load(tfstate_file)
+                except Exception as e:
+                    self.fail(f"Unable to read {tfstate_file} from project cloud directory: {e}")
 
-        self.log("Planning OpenTofu Project for AWS Networking")
-        self.plan_log, self.plan = tofu.plan()
-        if not self.plan or self.plan.errored:
-            self.fail(f"OpenTofu Plan Failed: {self.plan_log}")
-            return False, self.plan_log
+                for resource in tfstate_json["resources"]:
+                    resource_name = resource["name"]
+                    resource_id = resource["instances"][0]["attributes"]["id"]
+                    self.log(f"{resource_name}: {resource_id}")
+                    self.aws_objects[resource_name] = resource_id
+                    if resource['type'] == 'aws_lb':
+                        self.aws_objects["lb_dns_name"] = resource["instances"][0]["attributes"]["dns_name"]
+                    
+                try:
+                    aws_objects_out_file = open(os.path.join(self.directory,"aws_objects.json"),"w")
+                    aws_objects_out_file.write(json.dumps(self.aws_objects,indent=2))
+                    aws_objects_out_file.close()
+                    return
+                except Exception as e:
+                    self.fail(f"Unable to write AWS created objects file to project directory: {e}")
 
-        try:
-            self.log("Applying OpenTofu Project for AWS Networking")
-            self.apply_log = tofu.apply()
-            self.log("OpenTofu Log:")
-            self.log(self.apply_log)
-            return True, self.apply_log
-        except Exception as e:
-            self.fail(
-                f"OpenTofu plan failed to apply: {e}\nOpenTofu Apply Log:\n{self.apply_log}"
-            )
-            return False, self.apply_log
-
-    def refresh_aws_networking(self):
-        tofu = Tofu(cwd=self.pwd)
-
-        self.log("Running Tofu Plan to refresh state")
-        self.plan_log, self.plan = tofu.plan()
-        if not self.plan or self.plan.errored:
-            self.fail(f"OpenTofu Plan Failed: {self.plan_log}")
-            return False, self.plan_log
-        
-        try:
-            self.tfstate = tofu.state().data
-        except Exception as e:
-            self.fail(f"Failed to retrieve state for OpenTofu project: {e}")
-
-    def get_aws_created_objects(self):
-        """
-        Reads the tfstate to get the created objects and their IDs.
-        """
-        self.log("Getting details of AWS Created Objects from tfstate file.")
-        try:
-            tfstate_file = open(os.path.join(self.directory,"cloud", "terraform.tfstate"), "r")
-            tfstate_json = json.load(tfstate_file)
-        except Exception as e:
-            self.fail(f"Unable to read {tfstate_file} from project cloud directory: {e}")
-
-        for resource in tfstate_json["resources"]:
-            resource_name = resource["name"]
-            resource_id = resource["instances"][0]["attributes"]["id"]
-            self.log(f"{resource_name}: {resource_id}")
-            self.aws_objects[resource_name] = resource_id
-        
-        try:
-            aws_objects_out_file = open(os.path.join(self.directory,"aws_objects.json"),"w")
-            aws_objects_out_file.write(json.dumps(self.aws_objects,indent=2))
-            aws_objects_out_file.close()
-        except Exception as e:
-            self.fail(f"Unable to write AWS created objects file to project directory: {e}")
-        return
+    def cluster_tofu(self,cluster,action):
+        match action:
+            case "create":
+                cluster.tofu_project = Tofu(cwd=cluster.tofu_path)
+            case "init":
+                try:
+                    self.log(f"Initializing OpenTofu Project for NC2 Cluster {cluster.name}")
+                    cluster.init = cluster.tofu_project.init()
+                except Exception as e:
+                    self.fail(f"Failed to initialize OpenTofu project: {e}")
+            case "plan":
+                try:
+                    self.log(f"Planning OpenTofu Project for NC2 Cluster {cluster.name}")
+                    cluster.plan_log, cluster.plan = cluster.tofu_project.plan()
+                    if not cluster.plan or cluster.plan.errored:
+                        self.fail(f"OpenTofu Plan Failed: {cluster.plan_log}")
+                except Exception as e:
+                    self.fail(f"Failed to run tofu plan: {e}")
+            case "apply":
+                try:
+                    self.log(f"Applying OpenTofu Project for NC2 Cluster {cluster.name}")
+                    cluster.apply_log = cluster.tofu_project.apply()
+                    self.log("OpenTofu Log:")
+                    self.log(cluster.apply_log)
+                    return True, cluster.apply_log
+                except Exception as e:
+                    self.fail(
+                        f"OpenTofu plan failed to apply: {e}\nOpenTofu Apply Log:\n{cluster.apply_log}"
+                    )
 
     def build_nc2_cluster_objects(self): # As objects are built, we should check for an existing state file and use it. Saves time
         self.log("Building NC2 Cluster Objects")
@@ -673,7 +710,7 @@ class LabBuild:
         self.nc2_clusters = {}
         for c in range(0, self.build_params["cluster_count"]["val"]):
             this_cluster = nc2Cluster()
-            this_cluster.name = self.build_params["prefix"]["val"] + "-" + str(c)
+            this_cluster.name = self.build_params["project"]["val"] + "-" + str(c)
             this_cluster.number = c
             self.log(f"NC2 Cluster {str(c)}: {this_cluster.name}")
 
@@ -697,7 +734,7 @@ class LabBuild:
             self.log("Building cluster payload dictionary...")
             this_cluster.create_payload = deepcopy(self.nc2_cluster_base_payload)
             this_cluster.create_payload["data"]["name"] = (
-                self.build_params["prefix"]["val"] + "-" + str(c)
+                self.build_params["project"]["val"] + "-" + str(c)
             )
             this_cluster.create_payload["data"]["prism_central"]["management_subnet"] = (
                 self.aws_objects["private_pc_subnet_" + str(c)]
@@ -796,124 +833,77 @@ class LabBuild:
     def read_built_cluster_data(self):
         self.nc2_clusters = {}
         for c in range(0, self.build_params["cluster_count"]["val"]):
-            try:
+            this_cluster = nc2Cluster()
+            try: # Read cluster state file
                 cluster_state_file = open(os.path.join(self.directory,"clusters",f"{c}.json"))
                 cluster_state = json.loads(cluster_state_file.read())
                 cluster_state_file.close()
             except Exception as e:
                 self.fail(f"Unable to load cluster state for cluster {c}: {e}")
-            this_cluster = nc2Cluster()
-            for k,v in cluster_state.items():
+            for k,v in cluster_state.items(): # Load data from cluster state file into cluster object
                 this_cluster.__dict__[k] = v
-            self.nc2_clusters[c] = this_cluster
-        
+            this_cluster.project = self.build_params["project"]["val"] # Update the project value
+            if this_cluster.cluster_id == None: # If a cluster ID isn't set for the cluster, get the cluster ID and the current cluster info.
+                this_cluster.get_cluster_id(self.jwt_token) # Get the cluster ID based on the cluster name
+                this_cluster.get_cluster(self.jwt_token) # Get the cluster details now that we have the cluster ID
+                cluster_state_file = open(os.path.join(self.directory,"clusters",f"{c}.json"),"w") # refresh the cluster state file with the new state
+                cluster_state_file.write(json.dumps(this_cluster.__dict__,indent=2))
+                cluster_state_file.close()
+            self.nc2_clusters[c] = this_cluster # add the cluster object to the list of clusters
         return
-
-    def get_nc2_built_clusters(self):
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.jwt_token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            }
-
-            params = {"active": "true", "name": self.build_params["prefix"]["val"]}
-            response = requests.get(
-                NC2_BASE_URL + NC2_LIST_CLUSTERS_URL, params=params, headers=headers
-            )
-
-            if response.status_code == 200:
-                self.built_clusters = response.json()["data"]
-            else:
-                raise Exception(
-                    f"Cluster list failed with status code {response.status_code}, error {response.text}"
-                )
-
-        except Exception as e:
-            raise Exception(f"Error listing clusters: {str(e)}")
-        
-    def get_nc2_cluster_by_id(self,id):
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.jwt_token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            }
-
-            response = requests.get(
-                NC2_BASE_URL + NC2_LIST_CLUSTERS_URL + '/' + id, headers=headers
-            )
-
-            if response.status_code == 200:
-                response_data = response.json()
-                print(response_data)
-            else:
-                raise Exception(
-                    f"Cluster list failed with status code {response.status_code}, error {response.text}"
-                )
-
-        except Exception as e:
-            raise Exception(f"Error listing clusters: {str(e)}")    
-    
-    def get_nc2_prism_centrals(self):
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.jwt_token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            }
-
-            # logging.debug(headers)
-            params = {"availability_zone": self.build_params["az"]["val"]}
-            response = requests.get(
-                NC2_BASE_URL
-                + "/cloud-accounts/"
-                + NC2_CLOUD_ACCOUNT_ID
-                + "/regions/"
-                + self.build_params["region"]["val"]
-                + "/prism-centrals",
-                params=params,
-                headers=headers,
-            )
-
-            if response.status_code == 200:
-                self.prism_centrals = response.json()["data"]
-                for pc in self.prism_centrals:
-                    if pc["vpc"] == self.aws_objects["vpc"]:
-                        for cluster, data in self.nc2_clusters.items():
-                            if data.pc_subnet_id == pc["management_subnet"]:
-                                data.pc_vip = pc["pc_virtual_ip"]
-                                data.pc_ips = pc["vm_ips"]
-                                print(f"{cluster} - {pc['pc_virtual_ip']}")
-                                pass
-            else:
-                raise Exception(
-                    f"Prism Central list failed with status code {response.status_code}, error {response.text}"
-                )
-
-        except Exception as e:
-            raise Exception(f"Error listing Prism Centrals: {str(e)}")
 
     def generate_aws_nlb_config(self):
 
-        nlb_template_output = open(os.path.join(self.directory, "aws_nlb.tf"), "w")
-        nlb_template_file = open(os.path.join("templates", "aws_nlb.tf.j2"), "r")
-        nlb_template = Template(nlb_template_file.read())
-        nlb_template_file.close()
+        try:
+            nlb_template_file = open(os.path.join("templates", "aws_nlb.tf.j2"), "r")
+            nlb_template = Template(nlb_template_file.read())
+            nlb_template_file.close()
+        except Exception as e:
+            self.fail(f"Error loading AWS NLB Template file: {e}.")
+        
+        nlb_template_output = open(os.path.join(self.directory,"cloud", "aws_nlb.tf"), "w")
 
-        for cluster, info in self.nc2_clusters.items():
-            nlb_config = {
-                "project_prefix": self.aws_params["project_prefix"],
-                "cluster_name": info.name,
-                "cluster_number": info.number,
-                "pc_vip": info.pc_vip,
-                "pc_cidr": info.pc_subnet_cidr,
-            }
-            nlb_template_output.write(nlb_template.render(nlb_config))
+        for c, cluster in self.nc2_clusters.items():
+            nlb_template_output.write(nlb_template.render(cluster.__dict__))
 
         nlb_template_output.close()
         return
 
+    def get_cluster_access_url(self):
+        for c,cluster in self.nc2_clusters.items():
+            port = 9440 + c
+            cluster_url = f"https://{self.aws_objects['lb_dns_name']}:{port}"
+            cluster.lb_port = port
+            cluster.lb_dns_name = self.aws_objects['lb_dns_name']
+            cluster.access_url = cluster_url
+            print(f"Cluster {cluster.number} - {cluster.name} - URL: {cluster_url}")
+            cluster.write_state_file()
+
+    def load_cluster_images(self):
+        for c, cluster in self.nc2_clusters.items():
+            try:
+                cluster.tofu_folder = os.path.join('clusters',str(cluster.number))        
+                os.mkdir(os.path.join(self.directory,cluster.tofu_folder))
+                self.log(f"'{cluster.tofu_folder}' directory created successfully.")
+            except FileExistsError:
+                self.log(f"Directory '{cluster.tofu_folder}' already exists.")
+            except PermissionError:
+                self.log(f"Permission denied: Unable to create '{cluster.tofu_folder}'.")
+            except Exception as e:
+                self.fail(f"An error occurred: {e}")
+                quit()
+            try:
+                self.render_template(folder=cluster.tofu_folder,template="pc_provider",values=cluster.__dict__)
+                self.render_template(folder=cluster.tofu_folder,template="pc_images",values=VM_IMAGE_FILES)
+            except Exception as e:
+                self.fail(f"Unable to create Prism Central TF files: {e}")
+            cluster.tofu_path = Path(os.path.join(self.directory, cluster.tofu_folder))
+            self.cluster_tofu(cluster=cluster,action="create")
+            self.cluster_tofu(cluster=cluster,action="init")
+            self.cluster_tofu(cluster=cluster,action="plan")
+            self.cluster_tofu(cluster=cluster,action="apply")
+        pass
+    
     def close_logfile(self):
         self.logfile.close()
 

@@ -4,8 +4,8 @@ from classes import *
 
 def main():
     ### Lab Generator for AWS 
-    ### Phase 2: Get NC2 Cluster Info and build AWS Load Balancing.
-
+    ### Phase 3: Prism Central Configuration & Image Adds
+    
     parser = argparse.ArgumentParser(description=f"NC2 Lab Generator")
     # parser.add_argument("--aws", "-a", help="Build on AWS", action='store_true') # only AWS for now, so that's the default
     # parser.add_argument("--azure", "-z", help="Build on Azure", action='store_true') # not yet!
@@ -32,14 +32,8 @@ def main():
     lab_build.validate_info()
     lab_build.get_nc2_jwt()
     lab_build.read_built_cluster_data()
-    lab_build.generate_aws_nlb_config()
-    lab_build.render_template(folder="cloud", template="aws_provider", values=lab_build.aws_params)
-    lab_build.cloud_tofu_project(action="plan")
-    lab_build.cloud_tofu_project(action="apply")
-    lab_build.cloud_tofu_project(action="get_aws_ids")
-    lab_build.get_cluster_access_url()
-    lab_build.close_logfile()
-
+    lab_build.load_cluster_images()
+    
     
 
 if __name__ == "__main__":

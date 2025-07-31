@@ -1,0 +1,30 @@
+
+terraform {
+  required_providers {
+    nutanix = {
+      source  = "nutanix/nutanix"
+      version = "2.2.0"
+    }
+  }
+}
+
+provider "nutanix" {
+  username = "{{ pc_user }}"
+  password = "{{ pc_password }}"
+  endpoint = "{{ lb_dns_name }}"
+  port     = {{ lb_port }}
+  insecure = true
+}
+
+#################################################
+# GET CLUSTERS DATA
+#################################################
+
+data "nutanix_clusters" "clusters" {}
+
+locals {
+  cluster1 = [
+    for cluster in data.nutanix_clusters.clusters.entities :
+    cluster.metadata.uuid if cluster.service_list[0] != "PRISM_CENTRAL"
+  ][0]
+}

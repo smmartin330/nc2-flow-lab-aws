@@ -1,5 +1,5 @@
 #cloud-config
-password: {{ vm_password }}
+password: Nutanix.123
 chpasswd: { expire: False }
 ssh_pwauth: True
 apt_update: True
@@ -13,8 +13,8 @@ write_files:
     <?php
     define( 'DB_NAME', 'wordpress' );
     define( 'DB_USER', 'wp_admin' );
-    define( 'DB_PASSWORD', '{{ vm_password }}' );
-    define( 'DB_HOST', '{{ db_server_ip }}' );
+    define( 'DB_PASSWORD', 'Nutanix.123' );
+    define( 'DB_HOST', '100.64.128.25' );
     define( 'DB_CHARSET', 'utf8mb4' );
     define( 'DB_COLLATE', '' );
     define('AUTH_KEY',         'S|LFZ0`.6@eL:z^Oyfx|Q].#(pWAs&|uDc-e/Zw|*#2~W|uMl =90+A-+6bu3w{+');
@@ -33,7 +33,7 @@ write_files:
     require_once ABSPATH . 'wp-settings.php';
    path: /tmp/wp-config.php
 runcmd: 
- - hostname {{ hostname }}
+ - hostname FNS-WEB02
  - echo "<?php phpinfo(); ?> " > /var/www/html/info.php
  - cd /tmp && wget https://wordpress.org/latest.tar.gz
  - tar -xvf /tmp/latest.tar.gz

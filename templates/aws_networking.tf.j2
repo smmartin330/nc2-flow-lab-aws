@@ -48,7 +48,7 @@ resource "aws_route_table" "public_rt" {
   tags = {
     Name = "{{ project }}-public-rt"
   }
-}
+} 
 
 # Internet Gateway
 resource "aws_internet_gateway" "igw" {
@@ -112,7 +112,7 @@ resource "aws_subnet" "public_subnet" {
   }
 }
 
-# Shared Private Subnets
+# Shared Private Subnet
 # Cluster Management Subnet
 resource "aws_subnet" "private_metal_subnet" {
   vpc_id            = aws_vpc.vpc.id
@@ -124,8 +124,38 @@ resource "aws_subnet" "private_metal_subnet" {
   }
 }
 
+# Network Load Balancer Security Group
+resource "aws_security_group" "{{ project }}-nlb-sg" {
+  name        = "{{ project }}-nlb-sg"
+  description = "Allow inbound access to Prism Central"
+  vpc_id      = aws_vpc.vpc.id
 
-# Per-Cluster PC & Flow Subnets
+  tags = {
+    Name = "{{ project }}-nlb-sg"
+  }
+}
+
+# NLB SG Ingress Rule
+{% for i in range(0,access_ips|length) %}
+resource "aws_vpc_security_group_ingress_rule" "{{ project }}-nlb-inbound_{{ i }}" {
+  security_group_id = aws_security_group.{{ project }}-nlb-sg.id
+  cidr_ipv4       = "{{ access_ips[i] }}"
+  from_port         = 9440
+  ip_protocol       = "tcp"
+  to_port           = {{ 9440 + cluster_count - 1 }}
+}
+{% endfor %}
+
+# NLB SG Egress Rule
+resource "aws_vpc_security_group_egress_rule" "{{ project }}-nlb-outbound" {
+  security_group_id = aws_security_group.{{ project }}-nlb-sg.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1" # semantically equivalent to all ports
+}
+
+
+# Per-Cluster
+# PC & Flow Subnets
 {% for i in range(0,cluster_count) %}
 resource "aws_subnet" "private_pc_subnet_{{ i }}" {
   vpc_id            = aws_vpc.vpc.id
@@ -147,42 +177,16 @@ resource "aws_subnet" "private_flow_subnet_{{ i }}" {
   }
 } 
 
-{% endfor %}
-
-resource "aws_security_group" "{{ project }}-nlb-sg" {
-  name        = "{{ project }}-nlb-sg"
-  description = "Allow inbound access to Prism Centrals"
-  vpc_id      = aws_vpc.vpc.id
-
-  tags = {
-    Name = "{{ project }}-nlb-sg"
-  }
-}
-
-{% for i in range(0,access_ips|length) %}
-resource "aws_vpc_security_group_ingress_rule" "{{ project }}-nlb-inbound_{{ i }}" {
-  security_group_id = aws_security_group.{{ project }}-nlb-sg.id
-  cidr_ipv4       = "{{ access_ips[i] }}"
-  from_port         = 9440
-  ip_protocol       = "tcp"
-  to_port           = {{ 9440 + cluster_count - 1 }}
-}
-{% endfor %}
-
-resource "aws_vpc_security_group_egress_rule" "{{ project }}-nlb-outbound" {
-  security_group_id = aws_security_group.{{ project }}-nlb-sg.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1" # semantically equivalent to all ports
-}
-
-resource "aws_lb" "{{ project }}-nlb" {
-  name               = "{{ project }}-nlb"
+resource "aws_lb" "{{ project }}-{{i}}-nlb" {
+  name               = "{{ project }}-{{i}}-nlb"
   internal           = false
   load_balancer_type = "network"
   subnets            = [ aws_subnet.public_subnet.id ]
   security_groups    = [ aws_security_group.{{ project }}-nlb-sg.id ]
 
   tags = {
-    Name = "{{ project }}-nlb"
+    Name = "{{ project }}-{{i}}-nlb"
   }
 }
+
+{% endfor %}

@@ -19,8 +19,8 @@ resource "aws_lb_target_group_attachment" "{{ name }}-lb-tg-attach" {
 }
 
 resource "aws_lb_listener" "{{ name }}-listener" {
-  load_balancer_arn = aws_lb.{{ project }}-nlb.arn
-  port              = "{{ 9440 + number }}"
+  load_balancer_arn = aws_lb.{{ project }}-{{ number }}-nlb.arn
+  port              = "{{ 9440  }}"
   protocol          = "TCP"
 
   default_action {

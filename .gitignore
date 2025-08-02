@@ -214,3 +214,4 @@ bin/
 vars.py
 vm_config_templates/sample.yaml
 temp-demo*
+terraform.tfstate

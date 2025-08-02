@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "aws" {
-  access_key = "{{ access_key }}"
-  secret_key = "{{ access_secret }}"
-  token      = "{{ token }}"
+  shared_config_files      = ["~/.aws/config"]
+  shared_credentials_files = ["~/.aws/credentialss"]
+  profile                  = "DeveloperAccess-015777019985"
 }

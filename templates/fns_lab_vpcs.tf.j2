@@ -1,0 +1,80 @@
+data "nutanix_subnets_v2" "overlay-external-subnet-nat"{
+  filter = "isExternal eq true and name eq 'overlay-external-subnet-nat'"
+}
+
+data "nutanix_vpcs_v2" "transit-vpc" {
+  filter = "name eq 'transit-vpc'"
+}
+
+resource "nutanix_vpc_v2" "fns_vpc" {
+  # Core Configuration
+  name        = "FNS-Lab-VPC"
+  description = "VPC for FNS Labs"
+  vpc_type    = "REGULAR"
+  external_subnets {
+    subnet_reference = data.nutanix_subnets_v2.overlay-external-subnet-nat.subnets.0.ext_id
+    external_ips {
+      ipv4 {
+        value         = cidrhost("{{ flow_subnet_cidr }}", 254)
+        prefix_length = 32
+      }
+    }
+    
+  }
+}
+
+data "nutanix_route_tables_v2" "fns_vpc_route_table"{
+  filter = "vpcReference eq '${nutanix_vpc_v2.fns_vpc.ext_id}'"
+}
+
+resource "nutanix_routes_v2" "fns_vpc_default_route" {
+  name               = "fns_vpc_default_route"
+  vpc_reference      = nutanix_vpc_v2.fns_vpc.ext_id
+  route_table_ext_id = data.nutanix_route_tables_v2.fns_vpc_route_table.route_tables.0.ext_id
+  destination {
+    ipv4 {
+      ip {
+        value = "0.0.0.0"
+      }
+      prefix_length = 0
+    }
+  }
+  next_hop {
+    next_hop_type      = "EXTERNAL_SUBNET"
+    next_hop_reference = data.nutanix_subnets_v2.overlay-external-subnet-nat.subnets.0.ext_id
+  }
+  route_type = "STATIC"
+}
+
+resource "nutanix_subnet_v2" "fns_vms" {
+  name              = "FNS-VMs"
+  subnet_type       = "OVERLAY"
+  vpc_reference     = nutanix_vpc_v2.fns_vpc.ext_id
+  ip_config {
+    ipv4 {
+      ip_subnet {
+        ip {
+          value = "100.64.128.0"
+        }
+        prefix_length = 24
+      }
+      pool_list {
+        start_ip {
+          value = "100.64.128.100"
+        }
+        end_ip {
+          value = "100.64.128.199" 
+        }
+      }
+    }
+  }
+  dhcp_options {
+    domain_name_servers {
+      ipv4 {
+        value = "8.8.8.8"
+      }
+    }
+  }
+  depends_on = [ nutanix_vpc_v2.fns_vpc ]
+}
+

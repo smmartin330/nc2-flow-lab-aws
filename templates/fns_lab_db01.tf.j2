@@ -1,0 +1,57 @@
+resource "nutanix_virtual_machine_v2" "{{ name }}" {
+  name                 = "{{ name }}"
+  description          = "{{ description }}"
+  num_cores_per_socket = 1
+  num_sockets          = 2
+  memory_size_bytes    = 8589934592
+  hardware_clock_timezone = "UTC"
+  cluster {
+    ext_id = data.nutanix_clusters.clusters.entities.0.metadata.uuid
+  }
+  disks {
+    disk_address {
+      bus_type = "SCSI"
+      index    = 0
+    }
+    backing_info {
+      vm_disk {
+        data_source {
+          reference {
+            image_reference {
+              image_ext_id = nutanix_image.{{ image }}.id
+            }
+          }
+        }
+        disk_size_bytes = 10737418240
+      }
+    }
+  }
+  nics {
+    network_info {
+      nic_type  = "NORMAL_NIC"
+      subnet {
+        ext_id = nutanix_subnet_v2.fns_vms.ext_id
+      }
+      vlan_mode = "ACCESS"
+      ipv4_config {
+        should_assign_ip = true
+        ip_address {
+          value        = "{{ ip_address }}"
+          prefix_length = 32
+         }
+      }
+    }
+  }
+  guest_customization {
+    config {
+       cloud_init {
+        cloud_init_script {
+          user_data {
+            value = "{{ cloud_init }}" # Base64 encoded cloud init script
+          }
+         }
+      }
+    }
+  }
+  depends_on = [ nutanix_subnet_v2.fns_vms ]
+}

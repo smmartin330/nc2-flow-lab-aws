@@ -1140,7 +1140,7 @@ class LabBuild:
             ###
             # WEB-01
             ###
-            web01_cloud_init = open(os.path.join("cloud_init","fns-web01.yaml")).read()
+            web01_cloud_init = open(os.path.join("fns_demo","fns-web01.yaml")).read()
             web01_ci_bytes = web01_cloud_init.encode('utf-8')
             web01_b64 = base64.b64encode(web01_ci_bytes).decode('utf-8')
             web01 = {
@@ -1159,7 +1159,7 @@ class LabBuild:
             ####
             # WEB-02
             ###
-            web02_cloud_init = open(os.path.join("cloud_init","fns-web02.yaml")).read()
+            web02_cloud_init = open(os.path.join("fns_demo","fns-web02.yaml")).read()
             web02_ci_bytes = web02_cloud_init.encode('utf-8')
             web02_b64 = base64.b64encode(web02_ci_bytes).decode('utf-8')
             web02 = {
@@ -1174,6 +1174,25 @@ class LabBuild:
                 folder=cluster.tofu_folder,
                 template="fns_lab_web02",
                 values=web02,
+            )
+            ####
+            # DB-01
+            ###
+            db01_cloud_init = open(os.path.join("fns_demo","fns-db01.yaml")).read()
+            db01_ci_bytes = db01_cloud_init.encode('utf-8')
+            db01_b64 = base64.b64encode(db01_ci_bytes).decode('utf-8')
+            db01 = {
+                "name": "FNS-DB01",
+                "vm_password": "Nutanix.123",
+                "description": "FNS Lab Database Server 1",
+                "image": "ubuntu-24_04_noble-numbat",
+                "ip_address": "100.64.128.25",
+                "cloud_init": db01_b64,
+            }
+            self.render_template(
+                folder=cluster.tofu_folder,
+                template="fns_lab_db01",
+                values=db01,
             )
             cluster.tofu_path = Path(os.path.join(self.directory, cluster.tofu_folder))
             self.cluster_tofu(cluster=cluster, action="create")

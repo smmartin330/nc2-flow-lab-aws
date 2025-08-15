@@ -1,0 +1,46 @@
+#cloud-config
+password: Nutanix.123
+chpasswd: { expire: False }
+ssh_pwauth: True
+apt_update: True
+packages:
+ - apache2
+ - php
+ - php-mysql
+ - mariadb-client
+write_files:
+ - content: |
+    <?php
+    define( 'DB_NAME', 'wordpress' );
+    define( 'DB_USER', 'wp_admin' );
+    define( 'DB_PASSWORD', 'Nutanix.123' );
+    define( 'DB_HOST', '100.65.128.25' );
+    define( 'DB_CHARSET', 'utf8mb4' );
+    define( 'DB_COLLATE', '' );
+    define('AUTH_KEY',         'S|LFZ0`.6@eL:z^Oyfx|Q].#(pWAs&|uDc-e/Zw|*#2~W|uMl =90+A-+6bu3w{+');
+    define('SECURE_AUTH_KEY',  'J3#/BfZ`sr twRL)||Xh?.r,0M%5@5)HXqH]R-:1=R]Pc0j*i<T&MzETJ1}8E`_2');
+    define('LOGGED_IN_KEY',    'v(M[3*@OC!k~`7<s0x27$l.VoA/9<N.e}twt([+C4cpE0VJQ.9|kgbov*~HP1E>J');
+    define('NONCE_KEY',        'f7%-stBSW#`P%|)rf7WX3S-w+T,&r#$gyO}d)Bbu 2W0U-~K)!QDXCW;Zvc|+<XE');
+    define('AUTH_SALT',        '#j[3yJX^QI.b?/F`;8lyQy4m`|!F(J[Eborki_9+K2#[P,w7E.#+0yCo;^q+hcP#');
+    define('SECURE_AUTH_SALT', '{$ eCfD!$5Dxy]5VW1.?#{{ceR+C3m^pZ<9-iXlWoB7hG@BqdQJD4CsAy-t!H$oT');
+    define('LOGGED_IN_SALT',   'z2x;52V~Tu-`e$|B|U^F2-D0`_k~Q;=XOn[.4WAzQ:=SSjfY21t6cXgUPDEZ5 8?');
+    define('NONCE_SALT',       'Bn>5f=O++(n7%!i(Iyl,##GouVw`+7mJQIVV@3b7(ssa6}CZQLjJ,7w<^t|e8?P,');
+    $table_prefix = 'wp_';
+    define( 'WP_DEBUG', false );
+    if ( ! defined( 'ABSPATH' ) ) {
+      define( 'ABSPATH', __DIR__ . '/' );
+    }
+    require_once ABSPATH . 'wp-settings.php';
+   path: /tmp/wp-config.php
+runcmd: 
+ - hostname DEV-WEB-02
+ - echo "<?php phpinfo(); ?> " > /var/www/html/info.php
+ - cd /tmp && wget https://wordpress.org/latest.tar.gz
+ - tar -xvf /tmp/latest.tar.gz
+ - cp -R /tmp/wordpress /var/www/html
+ - cp /tmp/wp-config.php /var/www/html/wordpress/
+ - chown -R www-data:www-data /var/www/html/wordpress
+ - chmod -R 755 /var/www/html/wordpress
+ - mkdir /var/www/html/wordpress/wp-content/uploads
+ - chown -R www-data:www-data /var/www/html/wordpress/wp-content/uploads/
+

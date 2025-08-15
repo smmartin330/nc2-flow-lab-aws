@@ -33,7 +33,7 @@ write_files:
     require_once ABSPATH . 'wp-settings.php';
    path: /tmp/wp-config.php
 runcmd: 
- - hostname FNS-WEB01
+ - hostname PROD-WEB-01
  - echo "<?php phpinfo(); ?> " > /var/www/html/info.php
  - cd /tmp && wget https://wordpress.org/latest.tar.gz
  - tar -xvf /tmp/latest.tar.gz

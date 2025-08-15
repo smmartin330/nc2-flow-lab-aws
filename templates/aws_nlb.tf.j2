@@ -30,7 +30,7 @@ resource "aws_lb_listener" "{{ name }}-listener" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "pc_{{ number }}_nlb_ingress" {
-  security_group_id = data.aws_security_groups.pc_{{ number }}_security_group.ids.0
+  security_group_id = data.aws_security_groups.pc_{{ number }}_security_group.id
   referenced_security_group_id = aws_security_group.{{ project }}-nlb-sg.id
   from_port         = 9440
   ip_protocol       = "tcp"

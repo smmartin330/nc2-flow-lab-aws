@@ -602,19 +602,6 @@ class LabBuild:
 
     def set_aws_params(self):
         self.log("Setting AWS Parameters for template files.")
-        if AWS_ACCESS_KEY_ID:
-            self.aws_params["access_key"] = AWS_ACCESS_KEY_ID
-            self.log(f"AWS Access Key: {self.aws_params["access_key"]}")
-        else:
-            self.fail("No AWS Access Key Provided.")
-        if AWS_SECRET_ACCESS_KEY:
-            self.aws_params["access_secret"] = AWS_SECRET_ACCESS_KEY
-            self.log(f"AWS Secret Key: NOT LOGGED")
-        else:
-            self.fail("No AWS Secret Key Provided.")
-        if AWS_SESSION_TOKEN:
-            self.aws_params["token"] = AWS_SESSION_TOKEN
-            self.log(f"AWS Session Token: NOT LOGGED")
 
         self.aws_params["project"] = self.build_params["project"]["val"]
         self.log(f"Project name: {self.aws_params["project"]}")
@@ -1138,60 +1125,117 @@ class LabBuild:
                 values=vpc_config,
             )
             ###
-            # WEB-01
+            # PROD-WEB-01
             ###
-            web01_cloud_init = open(os.path.join("fns_demo","fns-web01.yaml")).read()
-            web01_ci_bytes = web01_cloud_init.encode('utf-8')
-            web01_b64 = base64.b64encode(web01_ci_bytes).decode('utf-8')
-            web01 = {
-                "name": "FNS-WEB01",
+            prodweb01_cloud_init = open(os.path.join("fns_demo","prod-web01.yaml")).read()
+            prodweb01_ci_bytes = prodweb01_cloud_init.encode('utf-8')
+            prodweb01_b64 = base64.b64encode(prodweb01_ci_bytes).decode('utf-8')
+            prodweb01 = {
+                "name": "PROD-WEB-01",
                 "vm_password": "Nutanix.123",
-                "description": "FNS Lab Web Server 1",
+                "description": "FNS Prod Web Server 1",
                 "image": "ubuntu-24_04_noble-numbat",
                 "ip_address": "100.64.128.10",
-                "cloud_init": web01_b64,
+                "cloud_init": prodweb01_b64,
             }
             self.render_template(
                 folder=cluster.tofu_folder,
-                template="fns_lab_web01",
-                values=web01,
+                template="fns_lab_prodweb01",
+                values=prodweb01,
             )
             ####
-            # WEB-02
+            # PROD-WEB-02
             ###
-            web02_cloud_init = open(os.path.join("fns_demo","fns-web02.yaml")).read()
-            web02_ci_bytes = web02_cloud_init.encode('utf-8')
-            web02_b64 = base64.b64encode(web02_ci_bytes).decode('utf-8')
-            web02 = {
-                "name": "FNS-WEB02",
+            prodweb02_cloud_init = open(os.path.join("fns_demo","prod-web02.yaml")).read()
+            prodweb02_ci_bytes = prodweb02_cloud_init.encode('utf-8')
+            prodweb02_b64 = base64.b64encode(prodweb02_ci_bytes).decode('utf-8')
+            prodweb02 = {
+                "name": "PROD-WEB-02",
                 "vm_password": "Nutanix.123",
-                "description": "FNS Lab Web Server 2",
+                "description": "FNS Prod Web Server 2",
                 "image": "ubuntu-24_04_noble-numbat",
                 "ip_address": "100.64.128.11",
-                "cloud_init": web02_b64,
+                "cloud_init": prodweb02_b64,
             }
             self.render_template(
                 folder=cluster.tofu_folder,
-                template="fns_lab_web02",
-                values=web02,
+                template="fns_lab_prodweb02",
+                values=prodweb02,
             )
             ####
-            # DB-01
+            # PROD-DB-01
             ###
-            db01_cloud_init = open(os.path.join("fns_demo","fns-db01.yaml")).read()
+            proddb01_cloud_init = open(os.path.join("fns_demo","prod-db01.yaml")).read()
+            proddb01_ci_bytes = proddb01_cloud_init.encode('utf-8')
+            proddb01_b64 = base64.b64encode(proddb01_ci_bytes).decode('utf-8')
+            proddb01 = {
+                "name": "PROD-DB-01",
+                "vm_password": "Nutanix.123",
+                "description": "FNS Prod Database Server 1",
+                "image": "ubuntu-24_04_noble-numbat",
+                "ip_address": "100.64.128.25",
+                "cloud_init": proddb01_b64,
+            }
+            self.render_template(
+                folder=cluster.tofu_folder,
+                template="fns_lab_proddb01",
+                values=proddb01,
+            )
+            ###
+            # DEV-WEB-01
+            ###
+            devweb1_cloud_init = open(os.path.join("fns_demo","dev-web01.yaml")).read()
+            devweb1_ci_bytes = devweb1_cloud_init.encode('utf-8')
+            devweb1_b64 = base64.b64encode(devweb1_ci_bytes).decode('utf-8')
+            devweb1 = {
+                "name": "DEV-WEB-01",
+                "vm_password": "Nutanix.123",
+                "description": "FNS Dev Web Server 1",
+                "image": "ubuntu-24_04_noble-numbat",
+                "ip_address": "100.65.128.10",
+                "cloud_init": devweb1_b64,
+            }
+            self.render_template(
+                folder=cluster.tofu_folder,
+                template="fns_lab_devweb01",
+                values=devweb1,
+            )
+            ####
+            # DEV-WEB-02
+            ###
+            devweb2_cloud_init = open(os.path.join("fns_demo","dev-web02.yaml")).read()
+            devweb2_ci_bytes = devweb2_cloud_init.encode('utf-8')
+            devweb2_b64 = base64.b64encode(devweb2_ci_bytes).decode('utf-8')
+            devweb2 = {
+                "name": "DEV-WEB02",
+                "vm_password": "Nutanix.123",
+                "description": "FNS Dwv Web Server 2",
+                "image": "ubuntu-24_04_noble-numbat",
+                "ip_address": "100.65.128.11",
+                "cloud_init": devweb2_b64,
+            }
+            self.render_template(
+                folder=cluster.tofu_folder,
+                template="fns_lab_devweb02",
+                values=devweb2,
+            )
+            ####
+            # DEV-DB-01
+            ###
+            db01_cloud_init = open(os.path.join("fns_demo","dev-db01.yaml")).read()
             db01_ci_bytes = db01_cloud_init.encode('utf-8')
             db01_b64 = base64.b64encode(db01_ci_bytes).decode('utf-8')
             db01 = {
-                "name": "FNS-DB01",
+                "name": "DEV-DB-01",
                 "vm_password": "Nutanix.123",
-                "description": "FNS Lab Database Server 1",
+                "description": "FNS Dev Database Server 1",
                 "image": "ubuntu-24_04_noble-numbat",
-                "ip_address": "100.64.128.25",
+                "ip_address": "100.65.128.25",
                 "cloud_init": db01_b64,
             }
             self.render_template(
                 folder=cluster.tofu_folder,
-                template="fns_lab_db01",
+                template="fns_lab_devdb01",
                 values=db01,
             )
             cluster.tofu_path = Path(os.path.join(self.directory, cluster.tofu_folder))

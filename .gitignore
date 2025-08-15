@@ -215,3 +215,6 @@ vars.py
 vm_config_templates/sample.yaml
 temp-demo*
 terraform.tfstate
+aws_login.sh
+csc-lab.json
+*-lab/

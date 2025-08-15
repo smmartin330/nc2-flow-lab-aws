@@ -23,8 +23,8 @@ def main():
     args = parser.parse_args()
     args.aws = True
     # Directory hard-coded for debug
-    args.directory = "temp-demo"
-    args.json = "temp-demo.json"
+    args.directory = "csc-lab"
+    args.json = "csc-lab.json"
 
     lab_build = LabBuild(args)
 

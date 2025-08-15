@@ -35,7 +35,7 @@ write_files:
     default_character_set = utf8mb4
    path: /tmp/50-server.cnf
 runcmd: 
- - hostname FNS-DB01
+ - hostname DEV-DB-01
  - wget https://raw.githubusercontent.com/smmartin330/nc2-flow-lab-aws/refs/heads/main/fns_demo/lab_db.sql -O /tmp/lab_db.sql
  - mysql -e "CREATE DATABASE wordpress;"
  - mysql -e "CREATE USER 'wp_admin'@'%' IDENTIFIED BY 'Nutanix.123';"

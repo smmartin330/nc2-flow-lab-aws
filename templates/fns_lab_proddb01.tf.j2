@@ -2,8 +2,8 @@ resource "nutanix_virtual_machine_v2" "{{ name }}" {
   name                 = "{{ name }}"
   description          = "{{ description }}"
   num_cores_per_socket = 1
-  num_sockets          = 1
-  memory_size_bytes    = 4294967296
+  num_sockets          = 2
+  memory_size_bytes    = 8589934592
   hardware_clock_timezone = "UTC"
   cluster {
     ext_id = data.nutanix_clusters.clusters.entities.0.metadata.uuid
@@ -30,7 +30,7 @@ resource "nutanix_virtual_machine_v2" "{{ name }}" {
     network_info {
       nic_type  = "NORMAL_NIC"
       subnet {
-        ext_id = nutanix_subnet_v2.fns_vms.ext_id
+        ext_id = nutanix_subnet_v2.prod_vm_subnet.ext_id
       }
       vlan_mode = "ACCESS"
       ipv4_config {
@@ -53,5 +53,5 @@ resource "nutanix_virtual_machine_v2" "{{ name }}" {
       }
     }
   }
-  depends_on = [ nutanix_subnet_v2.fns_vms ]
+  depends_on = [ nutanix_subnet_v2.prod_vm_subnet ]
 }

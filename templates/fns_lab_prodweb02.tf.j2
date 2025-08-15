@@ -30,7 +30,7 @@ resource "nutanix_virtual_machine_v2" "{{ name }}" {
     network_info {
       nic_type  = "NORMAL_NIC"
       subnet {
-        ext_id = nutanix_subnet_v2.fns_vms.ext_id
+        ext_id = nutanix_subnet_v2.prod_vm_subnet.ext_id
       }
       vlan_mode = "ACCESS"
       ipv4_config {
@@ -53,5 +53,5 @@ resource "nutanix_virtual_machine_v2" "{{ name }}" {
       }
     }
   }
-  depends_on = [ nutanix_subnet_v2.fns_vms ]
+  depends_on = [ nutanix_subnet_v2.prod_vm_subnet ]
 }

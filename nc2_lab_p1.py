@@ -22,8 +22,8 @@ def main():
     args.aws = True
 
     # debug hard-coded vars
-    args.directory = "temp-demo"
-    args.json = "temp-demo.json"
+    args.directory = "csc-lab"
+    args.json = "csc-lab.json"
 
     lab_build = LabBuild(args)
 

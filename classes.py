@@ -242,6 +242,9 @@ class AWS:
             self.__dict__[k] = v
 
 class LabBuild:
+    '''
+    This is the class for the lab build that includes all the required functions.
+    '''
     def __init__(self, args):
         self.args = args
         self.substrate = "aws"
@@ -488,6 +491,14 @@ class LabBuild:
             self.fail(f"Unable to write parameters file to project directory: {e}")
 
     def read_project_data(self):
+        '''
+        This reads the state data from the project directory. It looks for three files.
+        It is used when running P2 or any lab-build scripts.
+        
+        build_params.json includes the basic project parameters.
+        aws_params.json includes the computed params for AWS.
+        aws_objects.json includes the actual AWS object IDs.
+        '''
         # Read project output files
         self.log(f"Reading saved project data from {self.directory} folder.")
         try:
@@ -513,23 +524,13 @@ class LabBuild:
         except:
             self.fail(f"Unable to read AWS object data file: {e}")
 
-        # update AWS params with current AWS secret data
-        self.log("Updating AWS Parameters for template files.")
-        if AWS_ACCESS_KEY_ID:
-            self.aws_params["access_key"] = AWS_ACCESS_KEY_ID
-            self.log(f"AWS Access Key: {self.aws_params["access_key"]}")
-        else:
-            self.fail("No AWS Access Key Provided.")
-        if AWS_SECRET_ACCESS_KEY:
-            self.aws_params["access_secret"] = AWS_SECRET_ACCESS_KEY
-            self.log(f"AWS Secret Key: NOT LOGGED")
-        else:
-            self.fail("No AWS Secret Key Provided.")
-        if AWS_SESSION_TOKEN:
-            self.aws_params["token"] = AWS_SESSION_TOKEN
-            self.log(f"AWS Session Token: NOT LOGGED")
-
     def validate_info(self):  # this is messy and can be betters.
+        '''
+        This iterates through all the parameters and checks for valid values.
+        '''
+        
+        # cluster_count
+        # 0 - 10 are valid. 0 builds cloud constructs only. Greater than 10 errors out.
         if self.build_params["cluster_count"]["val"] == 0:
             self.log(
                 """Cluster count of 0 provided. VPC networking will be built 
@@ -546,12 +547,13 @@ class LabBuild:
                         "User accepted. Proceeding with public cloud network build only."
                     )
                     break
-
         elif self.build_params["cluster_count"]["val"] < 0:
             self.fail("Cannot build a negative number of clusters.")
         elif self.build_params["cluster_count"]["val"] > 10:
             self.fail("This tool only supports a maximum of 10 clusters per build.")
 
+        # network validation - vpc cidr
+        # Checks to make sure a valid CIDR with a prefix length <=20 was provided to ensure room for cluster subnets.
         self.log("Validating networking...")
         try:
             cidr_network = ipaddress.IPv4Network(self.build_params["vpc_cidr"]["val"])
@@ -564,6 +566,8 @@ class LabBuild:
         except Exception as e:
             self.fail(f"VPC CIDR invalid. Error: {e}")
 
+        # network validation - carving up VPC cidr
+        # Carves up VPC into shared public & cluster mgmt subnets and per-cluster PC/Flow subnets
         try:
             cidr_subnets = list(cidr_network.subnets(new_prefix=24))
             self.networks["vpc_public"] = str(cidr_subnets[0])
@@ -590,6 +594,8 @@ class LabBuild:
                 "The provided VPC CIDR subnet is insufficient to proceed with the requested number of clusters."
             )
 
+        # network validation - management IPs
+        # ensures that the management IP{s provided are valid. }
         self.log("Validating Management Access IPs")
         for ip in self.build_params["access_ips"]["val"]:
             try:
@@ -601,6 +607,10 @@ class LabBuild:
         return
 
     def set_aws_params(self):
+        '''
+        This generates the dictionary used for rendering AWS templates and 
+        writes the information out to aws_params.json.
+        '''
         self.log("Setting AWS Parameters for template files.")
 
         self.aws_params["project"] = self.build_params["project"]["val"]
@@ -1085,9 +1095,6 @@ class LabBuild:
         WordPress site with a single demo page. The database password will be Nutanix.123
         '''
         for c,cluster in self.nc2_clusters.items():
-            do_it = input(f"Apply FNS Lab config to cluster {cluster.name}? ")
-            if do_it != "y":
-                continue
             try:
                 cluster.tofu_folder = os.path.join("clusters", str(cluster.number))
                 os.mkdir(os.path.join(self.directory, cluster.tofu_folder))
@@ -1118,7 +1125,10 @@ class LabBuild:
             # Networking
             ###
             # generate the networking terraform
-            vpc_config = { "flow_subnet_cidr": cluster.flow_subnet_cidr }
+            vpc_config = { "flow_subnet_cidr": cluster.flow_subnet_cidr,
+                           "group_prod_subnet": f"192.168.1{str(c)}.0",
+                           "group_dev_subnet": f"192.168.2{str(c)}.0",
+                            "c": c }
             self.render_template(
                 folder=cluster.tofu_folder,
                 template="fns_lab_vpcs",

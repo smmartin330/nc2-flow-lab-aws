@@ -23,10 +23,13 @@ def main():
     args = parser.parse_args()
     args.aws = True
     # Directory hard-coded for debug
-    args.directory = "csc-lab"
-    args.json = "csc-lab.json"
+    args.directory = "test-lab"
+    args.json = "test-lab.json"
 
     lab_build = LabBuild(args)
+
+    print("Before you are able to apply the FNS Demo Lab configuration, you will need to add the NLB security group as an inbound source for each Prism Central security group.")
+    input("Once you have verified this is complete, press enter to continue.")
 
     lab_build.read_project_data()
     lab_build.validate_info()

@@ -42,59 +42,25 @@ resource "nutanix_vpc_v2" "fns_prod_vpc" {
   name        = "FNS-Prod-VPC"
   description = "Prod VPC for FNS Labs"
   vpc_type    = "REGULAR"
-  external_subnets {
+  external_subnets { 
     subnet_reference = nutanix_subnet_v2.overlay-external-subnet-nonat.ext_id
     external_ips {
       ipv4 {
         value         = cidrhost("100.64.100.0/24", 10)
         prefix_length = 32
-      }
-    } 
-  }
-  externally_routable_prefixes {
-    ipv4 {
-      ip {
-        value         = "100.64.128.0"
-        prefix_length = 32
-      }
-      prefix_length = 24
+        }
+      } 
+    }
+    external_subnets {
+      subnet_reference = data.nutanix_subnets_v2.overlay-external-subnet-nat.subnets.0.ext_id
     }
   }
-}
 
-resource "nutanix_vpc_v2" "fns_dev_vpc" {
-  # Core Configuration
-  name        = "FNS-Dev-VPC"
-  description = "Dev VPC for FNS Labs"
-  vpc_type    = "REGULAR"
-  external_subnets {
-subnet_reference = nutanix_subnet_v2.overlay-external-subnet-nonat.ext_id
-    external_ips {
-      ipv4 {
-        value         = cidrhost("100.64.100.0/24", 11)
-        prefix_length = 32
-      }
-    }
-  }
-  externally_routable_prefixes {
-    ipv4 {
-      ip {
-        value         = "100.65.128.0"
-        prefix_length = 32
-      }
-      prefix_length = 24
-    }
-  }
-}
+
 
 data "nutanix_route_tables_v2" "fns_prod_vpc_route_table"{
   filter = "vpcReference eq '${nutanix_vpc_v2.fns_prod_vpc.ext_id}'"
 }
-
-data "nutanix_route_tables_v2" "fns_dev_vpc_route_table"{
-  filter = "vpcReference eq '${nutanix_vpc_v2.fns_dev_vpc.ext_id}'"
-}
-
 
 resource "nutanix_routes_v2" "fns_prod_vpc_default_route" {
   name               = "fns_prod_vpc_default_route"
@@ -110,9 +76,70 @@ resource "nutanix_routes_v2" "fns_prod_vpc_default_route" {
   }
   next_hop {
     next_hop_type      = "EXTERNAL_SUBNET"
+    next_hop_reference = data.nutanix_subnets_v2.overlay-external-subnet-nat.subnets.0.ext_id
+  }
+  route_type = "STATIC"
+}
+
+resource "nutanix_routes_v2" "fns_prod_vpc_group_prod_route" {
+  name               = "fns_prod_vpc_group_prod_route"
+  vpc_reference      = nutanix_vpc_v2.fns_prod_vpc.ext_id
+  route_table_ext_id = data.nutanix_route_tables_v2.fns_prod_vpc_route_table.route_tables.0.ext_id
+  destination {
+    ipv4 {
+      ip {
+        value = "{{ group_prod_subnet }}"
+      }
+      prefix_length = 24
+    }
+  }
+  next_hop {
+    next_hop_type      = "EXTERNAL_SUBNET"
     next_hop_reference = nutanix_subnet_v2.overlay-external-subnet-nonat.ext_id
   }
   route_type = "STATIC"
+}
+
+resource "nutanix_routes_v2" "fns_prod_vpc_group_dev_route" {
+  name               = "fns_prod_vpc_group_dev_route"
+  vpc_reference      = nutanix_vpc_v2.fns_prod_vpc.ext_id
+  route_table_ext_id = data.nutanix_route_tables_v2.fns_prod_vpc_route_table.route_tables.0.ext_id
+  destination {
+    ipv4 {
+      ip {
+        value = "{{ group_dev_subnet }}"
+      }
+      prefix_length = 24
+    }
+  }
+  next_hop {
+    next_hop_type      = "EXTERNAL_SUBNET"
+    next_hop_reference = nutanix_subnet_v2.overlay-external-subnet-nonat.ext_id
+  }
+  route_type = "STATIC"
+}
+
+resource "nutanix_vpc_v2" "fns_dev_vpc" {
+  # Core Configuration
+  name        = "FNS-Dev-VPC"
+  description = "Dev VPC for FNS Labs"
+  vpc_type    = "REGULAR"
+  external_subnets {
+    subnet_reference = nutanix_subnet_v2.overlay-external-subnet-nonat.ext_id
+    external_ips {
+      ipv4 {
+        value         = cidrhost("100.64.100.0/24", 11)
+        prefix_length = 32
+        }
+      } 
+    }
+    external_subnets{
+      subnet_reference = data.nutanix_subnets_v2.overlay-external-subnet-nat.subnets.0.ext_id
+    }
+}
+
+data "nutanix_route_tables_v2" "fns_dev_vpc_route_table"{
+  filter = "vpcReference eq '${nutanix_vpc_v2.fns_dev_vpc.ext_id}'"
 }
 
 resource "nutanix_routes_v2" "fns_dev_vpc_default_route" {
@@ -129,11 +156,48 @@ resource "nutanix_routes_v2" "fns_dev_vpc_default_route" {
   }
   next_hop {
     next_hop_type      = "EXTERNAL_SUBNET"
+    next_hop_reference = data.nutanix_subnets_v2.overlay-external-subnet-nat.subnets.0.ext_id
+  }
+  route_type = "STATIC"
+}
+
+resource "nutanix_routes_v2" "fns_dev_vpc_group_prod_route" {
+  name               = "fns_dev_vpc_group_prod_route"
+  vpc_reference      = nutanix_vpc_v2.fns_dev_vpc.ext_id
+  route_table_ext_id = data.nutanix_route_tables_v2.fns_dev_vpc_route_table.route_tables.0.ext_id
+  destination {
+    ipv4 {
+      ip {
+        value = "{{ group_prod_subnet }}"
+      }
+      prefix_length = 24
+    }
+  }
+  next_hop {
+    next_hop_type      = "EXTERNAL_SUBNET"
     next_hop_reference = nutanix_subnet_v2.overlay-external-subnet-nonat.ext_id
   }
   route_type = "STATIC"
 }
 
+resource "nutanix_routes_v2" "fns_dev_vpc_group_dev_route" {
+  name               = "fns_dev_vpc_group_dev_route"
+  vpc_reference      = nutanix_vpc_v2.fns_dev_vpc.ext_id
+  route_table_ext_id = data.nutanix_route_tables_v2.fns_dev_vpc_route_table.route_tables.0.ext_id
+  destination {
+    ipv4 {
+      ip {
+        value = "{{ group_dev_subnet }}"
+      }
+      prefix_length = 24
+    }
+  }
+  next_hop {
+    next_hop_type      = "EXTERNAL_SUBNET"
+    next_hop_reference = nutanix_subnet_v2.overlay-external-subnet-nonat.ext_id
+  }
+  route_type = "STATIC"
+}
 
 resource "nutanix_subnet_v2" "prod_vm_subnet" {
   name              = "FNS-Prod"

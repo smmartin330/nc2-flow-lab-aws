@@ -218,3 +218,4 @@ terraform.tfstate
 aws_login.sh
 csc-lab.json
 *-lab/
+test-lab.json
